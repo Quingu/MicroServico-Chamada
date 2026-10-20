@@ -12,9 +12,11 @@ import com.pfc.thindesk.dto.RequisicaoAberturaChamado;
 import com.pfc.thindesk.dto.RespostaChamado;
 import com.pfc.thindesk.entidade.Chamado;
 import com.pfc.thindesk.entidade.SituacaoChamado;
+import com.pfc.thindesk.excecao.RecursoNaoEncontradoException;
 import com.pfc.thindesk.repositorio.RepositorioChamado;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -120,6 +122,55 @@ class ServicoChamadoTest {
         List<RespostaChamado> chamados = servicoChamado.listarChamadosDoUsuario("usuario-1", autenticacao);
 
         assertThat(chamados).hasSize(1);
+    }
+
+    @Test
+    void deveConsultarChamadoDoProprioSolicitante() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(servicoAutenticacao.obterIdUsuario(autenticacao)).thenReturn("usuario-1");
+        when(repositorioChamado.findById("chamado-1"))
+                .thenReturn(Optional.of(criarChamado("chamado-1", "usuario-1")));
+
+        RespostaChamado resposta = servicoChamado.consultarChamadoPorId("chamado-1", autenticacao);
+
+        assertThat(resposta.id()).isEqualTo("chamado-1");
+        assertThat(resposta.situacao()).isEqualTo(SituacaoChamado.ABERTO);
+    }
+
+    @Test
+    void deveLancarRecursoNaoEncontradoQuandoChamadoNaoExistir() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(repositorioChamado.findById("chamado-inexistente")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> servicoChamado.consultarChamadoPorId("chamado-inexistente", autenticacao))
+                .isInstanceOf(RecursoNaoEncontradoException.class)
+                .hasMessageContaining("chamado-inexistente");
+    }
+
+    @Test
+    void deveImpedirConsultaDeChamadoPorUsuarioSemPermissao() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(servicoAutenticacao.obterIdUsuario(autenticacao)).thenReturn("usuario-2");
+        when(repositorioChamado.findById("chamado-1"))
+                .thenReturn(Optional.of(criarChamado("chamado-1", "usuario-1")));
+        when(servicoAutenticacao.possuiPerfilAdministrador(autenticacao)).thenReturn(false);
+
+        assertThatThrownBy(() -> servicoChamado.consultarChamadoPorId("chamado-1", autenticacao))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("permissão");
+    }
+
+    @Test
+    void devePermitirTecnicoResponsavelConsultarChamado() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(servicoAutenticacao.obterIdUsuario(autenticacao)).thenReturn("tecnico-1");
+        Chamado chamado = criarChamado("chamado-1", "usuario-1");
+        chamado.setIdTecnicoResponsavel("tecnico-1");
+        when(repositorioChamado.findById("chamado-1")).thenReturn(Optional.of(chamado));
+
+        RespostaChamado resposta = servicoChamado.consultarChamadoPorId("chamado-1", autenticacao);
+
+        assertThat(resposta.id()).isEqualTo("chamado-1");
     }
 
     private Chamado criarChamado(String id, String idSolicitante) {

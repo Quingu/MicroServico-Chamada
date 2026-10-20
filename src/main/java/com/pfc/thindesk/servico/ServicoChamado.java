@@ -4,6 +4,7 @@ import com.pfc.thindesk.dto.RequisicaoAberturaChamado;
 import com.pfc.thindesk.dto.RespostaChamado;
 import com.pfc.thindesk.entidade.Chamado;
 import com.pfc.thindesk.entidade.SituacaoChamado;
+import com.pfc.thindesk.excecao.RecursoNaoEncontradoException;
 import com.pfc.thindesk.repositorio.RepositorioChamado;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -51,5 +52,21 @@ public class ServicoChamado {
                 .stream()
                 .map(RespostaChamado::de)
                 .toList();
+    }
+
+    public RespostaChamado consultarChamadoPorId(String id, Authentication autenticacao) {
+        Chamado chamado = repositorioChamado.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Chamado não encontrado com id: " + id));
+
+        String idAutenticado = servicoAutenticacao.obterIdUsuario(autenticacao);
+        boolean ehSolicitante = idAutenticado.equals(chamado.getIdSolicitante());
+        boolean ehTecnicoResponsavel = idAutenticado.equals(chamado.getIdTecnicoResponsavel());
+
+        if (!ehSolicitante && !ehTecnicoResponsavel
+                && !servicoAutenticacao.possuiPerfilAdministrador(autenticacao)) {
+            throw new AccessDeniedException("Usuário não possui permissão para consultar este chamado.");
+        }
+
+        return RespostaChamado.de(chamado);
     }
 }
