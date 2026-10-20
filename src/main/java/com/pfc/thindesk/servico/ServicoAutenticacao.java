@@ -17,6 +17,24 @@ public class ServicoAutenticacao {
         return autenticacao.getName();
     }
 
+    public boolean possuiPerfilTecnico(Authentication autenticacao) {
+        return possuiAutoridade(autenticacao, "ROLE_TECNICO");
+    }
+
+    public boolean possuiPerfilAdministrador(Authentication autenticacao) {
+        return possuiAutoridade(autenticacao, "ROLE_ADMIN");
+    }
+
+    public boolean possuiPerfilTecnicoOuAdministrador(Authentication autenticacao) {
+        return possuiPerfilTecnico(autenticacao) || possuiPerfilAdministrador(autenticacao);
+    }
+
+    private boolean possuiAutoridade(Authentication autenticacao, String autoridade) {
+        validarAutenticacao(autenticacao);
+        return autenticacao.getAuthorities().stream()
+                .anyMatch(concedida -> autoridade.equals(concedida.getAuthority()));
+    }
+
     private void validarAutenticacao(Authentication autenticacao) {
         if (autenticacao == null
                 || !autenticacao.isAuthenticated()

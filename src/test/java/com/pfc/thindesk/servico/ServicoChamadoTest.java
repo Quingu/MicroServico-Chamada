@@ -1,8 +1,11 @@
 package com.pfc.thindesk.servico;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.pfc.thindesk.dto.RequisicaoAberturaChamado;
@@ -10,12 +13,15 @@ import com.pfc.thindesk.dto.RespostaChamado;
 import com.pfc.thindesk.entidade.Chamado;
 import com.pfc.thindesk.entidade.SituacaoChamado;
 import com.pfc.thindesk.repositorio.RepositorioChamado;
+import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +54,7 @@ class ServicoChamadoTest {
         RespostaChamado resposta = servicoChamado.abrirChamado(requisicao, autenticacao);
 
         ArgumentCaptor<Chamado> captor = ArgumentCaptor.forClass(Chamado.class);
-        org.mockito.Mockito.verify(repositorioChamado).save(captor.capture());
+        verify(repositorioChamado).save(captor.capture());
         Chamado chamadoSalvo = captor.getValue();
 
         assertThat(chamadoSalvo.getTitulo()).isEqualTo("Impressora sem papel");
@@ -61,5 +67,70 @@ class ServicoChamadoTest {
         assertThat(chamadoSalvo.getDataResolucao()).isNull();
         assertThat(resposta.id()).isEqualTo("chamado-1");
         assertThat(resposta.situacao()).isEqualTo(SituacaoChamado.ABERTO);
+    }
+
+    @Test
+    void deveListarChamadosDoProprioUsuario() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(servicoAutenticacao.obterIdUsuario(autenticacao)).thenReturn("usuario-1");
+        Chamado chamado = criarChamado("chamado-1", "usuario-1");
+        when(repositorioChamado.findByIdSolicitanteOrderByDataAberturaDesc("usuario-1"))
+                .thenReturn(List.of(chamado));
+
+        List<RespostaChamado> chamados = servicoChamado.listarChamadosDoUsuario("usuario-1", autenticacao);
+
+        assertThat(chamados).hasSize(1);
+        assertThat(chamados.get(0).id()).isEqualTo("chamado-1");
+        assertThat(chamados.get(0).idSolicitante()).isEqualTo("usuario-1");
+    }
+
+    @Test
+    void deveRetornarListaVaziaQuandoUsuarioNaoPossuirChamados() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(servicoAutenticacao.obterIdUsuario(autenticacao)).thenReturn("usuario-1");
+        when(repositorioChamado.findByIdSolicitanteOrderByDataAberturaDesc("usuario-1"))
+                .thenReturn(List.of());
+
+        List<RespostaChamado> chamados = servicoChamado.listarChamadosDoUsuario("usuario-1", autenticacao);
+
+        assertThat(chamados).isEmpty();
+    }
+
+    @Test
+    void deveImpedirUsuarioComumDeConsultarChamadosDeOutroUsuario() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(servicoAutenticacao.obterIdUsuario(autenticacao)).thenReturn("usuario-2");
+        when(servicoAutenticacao.possuiPerfilTecnicoOuAdministrador(autenticacao)).thenReturn(false);
+
+        assertThatThrownBy(() -> servicoChamado.listarChamadosDoUsuario("usuario-1", autenticacao))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("permissão");
+
+        verify(repositorioChamado, never()).findByIdSolicitanteOrderByDataAberturaDesc(any());
+    }
+
+    @Test
+    void devePermitirAdministradorConsultarChamadosDeOutroUsuario() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(servicoAutenticacao.obterIdUsuario(autenticacao)).thenReturn("admin");
+        when(servicoAutenticacao.possuiPerfilTecnicoOuAdministrador(autenticacao)).thenReturn(true);
+        when(repositorioChamado.findByIdSolicitanteOrderByDataAberturaDesc("usuario-1"))
+                .thenReturn(List.of(criarChamado("chamado-1", "usuario-1")));
+
+        List<RespostaChamado> chamados = servicoChamado.listarChamadosDoUsuario("usuario-1", autenticacao);
+
+        assertThat(chamados).hasSize(1);
+    }
+
+    private Chamado criarChamado(String id, String idSolicitante) {
+        Chamado chamado = new Chamado();
+        chamado.setId(id);
+        chamado.setTitulo("Título do chamado");
+        chamado.setDescricao("Descrição detalhada do chamado.");
+        chamado.setIdSolicitante(idSolicitante);
+        chamado.setNomeSolicitante("Maria Souza");
+        chamado.setDataAbertura(LocalDateTime.of(2026, 10, 20, 10, 30));
+        chamado.setSituacao(SituacaoChamado.ABERTO);
+        return chamado;
     }
 }

@@ -7,6 +7,7 @@ import com.pfc.thindesk.entidade.SituacaoChamado;
 import com.pfc.thindesk.repositorio.RepositorioChamado;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -35,5 +36,20 @@ public class ServicoChamado {
 
     public List<Chamado> listarChamados() {
         return repositorioChamado.findAll();
+    }
+
+    public List<RespostaChamado> listarChamadosDoUsuario(String idUsuario, Authentication autenticacao) {
+        String idAutenticado = servicoAutenticacao.obterIdUsuario(autenticacao);
+        boolean perfilPrivilegiado = servicoAutenticacao.possuiPerfilTecnicoOuAdministrador(autenticacao);
+
+        if (!idAutenticado.equals(idUsuario) && !perfilPrivilegiado) {
+            throw new AccessDeniedException(
+                    "Usuário não possui permissão para consultar os chamados de outro usuário.");
+        }
+
+        return repositorioChamado.findByIdSolicitanteOrderByDataAberturaDesc(idUsuario)
+                .stream()
+                .map(RespostaChamado::de)
+                .toList();
     }
 }
