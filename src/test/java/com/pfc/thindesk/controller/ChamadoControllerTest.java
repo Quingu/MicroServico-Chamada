@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.pfc.thindesk.dto.RequisicaoAberturaChamado;
 import com.pfc.thindesk.dto.RespostaChamado;
 import com.pfc.thindesk.entidade.SituacaoChamado;
+import com.pfc.thindesk.excecao.RecursoNaoEncontradoException;
 import com.pfc.thindesk.servico.ServicoChamado;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -102,6 +103,38 @@ class ChamadoControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.mensagem").value(
                         "Usuário não possui permissão para consultar os chamados de outro usuário."));
+    }
+
+    @Test
+    void deveConsultarChamadoPorId() throws Exception {
+        when(servicoChamado.consultarChamadoPorId(eq("chamado-1"), isNull()))
+                .thenReturn(respostaChamado("chamado-1", "usuario-1"));
+
+        mockMvc.perform(get("/api/chamados/chamado-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("chamado-1"))
+                .andExpect(jsonPath("$.titulo").value("Impressora sem papel"))
+                .andExpect(jsonPath("$.situacao").value("ABERTO"));
+    }
+
+    @Test
+    void deveRetornar404QuandoChamadoNaoExistir() throws Exception {
+        when(servicoChamado.consultarChamadoPorId(eq("chamado-inexistente"), isNull()))
+                .thenThrow(new RecursoNaoEncontradoException("Chamado não encontrado com id: chamado-inexistente"));
+
+        mockMvc.perform(get("/api/chamados/chamado-inexistente"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.mensagem").value("Chamado não encontrado com id: chamado-inexistente"));
+    }
+
+    @Test
+    void deveRetornar403AoConsultarChamadoSemPermissao() throws Exception {
+        when(servicoChamado.consultarChamadoPorId(eq("chamado-1"), isNull()))
+                .thenThrow(new AccessDeniedException("Usuário não possui permissão para consultar este chamado."));
+
+        mockMvc.perform(get("/api/chamados/chamado-1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.mensagem").value("Usuário não possui permissão para consultar este chamado."));
     }
 
     private RespostaChamado respostaChamado(String id, String idSolicitante) {

@@ -31,6 +31,12 @@ public class TratadorGlobalDeExcecoes {
                 .body(Map.of("mensagem", excecao.getMessage()));
     }
 
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    public ResponseEntity<Map<String, String>> tratarRecursoNaoEncontrado(RecursoNaoEncontradoException excecao) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("mensagem", excecao.getMessage()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> tratarCorpoInvalido(HttpMessageNotReadableException excecao) {
         return ResponseEntity.badRequest()

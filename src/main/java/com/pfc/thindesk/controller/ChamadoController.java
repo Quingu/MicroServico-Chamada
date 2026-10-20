@@ -37,4 +37,9 @@ public class ChamadoController {
                                                          Authentication autenticacao) {
         return servicoChamado.listarChamadosDoUsuario(id, autenticacao);
     }
+
+    @GetMapping("/{id}")
+    public RespostaChamado consultarChamado(@PathVariable("id") String id, Authentication autenticacao) {
+        return servicoChamado.consultarChamadoPorId(id, autenticacao);
+    }
 }
