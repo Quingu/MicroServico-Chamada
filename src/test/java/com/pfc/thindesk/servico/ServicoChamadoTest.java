@@ -9,10 +9,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.pfc.thindesk.dto.RequisicaoAberturaChamado;
+import com.pfc.thindesk.dto.RequisicaoResolucaoChamado;
 import com.pfc.thindesk.dto.RespostaChamado;
 import com.pfc.thindesk.entidade.Chamado;
 import com.pfc.thindesk.entidade.SituacaoChamado;
 import com.pfc.thindesk.excecao.RecursoNaoEncontradoException;
+import com.pfc.thindesk.excecao.RegraDeNegocioException;
 import com.pfc.thindesk.repositorio.RepositorioChamado;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -171,6 +173,79 @@ class ServicoChamadoTest {
         RespostaChamado resposta = servicoChamado.consultarChamadoPorId("chamado-1", autenticacao);
 
         assertThat(resposta.id()).isEqualTo("chamado-1");
+    }
+
+    @Test
+    void deveResolverChamadoComTecnicoAutenticado() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(servicoAutenticacao.possuiPerfilTecnico(autenticacao)).thenReturn(true);
+        when(servicoAutenticacao.obterIdUsuario(autenticacao)).thenReturn("tecnico-1");
+        when(servicoAutenticacao.obterNomeUsuario(autenticacao)).thenReturn("Carlos Técnico");
+        Chamado chamado = criarChamado("chamado-1", "usuario-1");
+        when(repositorioChamado.findById("chamado-1")).thenReturn(Optional.of(chamado));
+        when(repositorioChamado.save(any(Chamado.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
+
+        RespostaChamado resposta = servicoChamado.resolverChamado(
+                "chamado-1",
+                new RequisicaoResolucaoChamado("Substituído o toner da impressora."),
+                autenticacao);
+
+        assertThat(chamado.getSolucao()).isEqualTo("Substituído o toner da impressora.");
+        assertThat(chamado.getIdTecnicoResponsavel()).isEqualTo("tecnico-1");
+        assertThat(chamado.getNomeTecnicoResponsavel()).isEqualTo("Carlos Técnico");
+        assertThat(chamado.getDataResolucao()).isNotNull();
+        assertThat(chamado.getSituacao()).isEqualTo(SituacaoChamado.RESOLVIDO);
+        assertThat(resposta.situacao()).isEqualTo(SituacaoChamado.RESOLVIDO);
+        assertThat(resposta.solucao()).isEqualTo("Substituído o toner da impressora.");
+    }
+
+    @Test
+    void deveImpedirResolucaoPorUsuarioSemPerfilTecnico() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(repositorioChamado.findById("chamado-1"))
+                .thenReturn(Optional.of(criarChamado("chamado-1", "usuario-1")));
+        when(servicoAutenticacao.possuiPerfilTecnico(autenticacao)).thenReturn(false);
+        when(servicoAutenticacao.possuiPerfilAdministrador(autenticacao)).thenReturn(false);
+
+        assertThatThrownBy(() -> servicoChamado.resolverChamado(
+                "chamado-1",
+                new RequisicaoResolucaoChamado("Tentativa indevida de resolução."),
+                autenticacao))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("técnicos");
+
+        verify(repositorioChamado, never()).save(any(Chamado.class));
+    }
+
+    @Test
+    void deveLancarRecursoNaoEncontradoAoResolverChamadoInexistente() {
+        Authentication autenticacao = mock(Authentication.class);
+        when(repositorioChamado.findById("chamado-inexistente")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> servicoChamado.resolverChamado(
+                "chamado-inexistente",
+                new RequisicaoResolucaoChamado("Solução aplicada."),
+                autenticacao))
+                .isInstanceOf(RecursoNaoEncontradoException.class)
+                .hasMessageContaining("chamado-inexistente");
+    }
+
+    @Test
+    void deveImpedirSegundaResolucaoDeChamado() {
+        Authentication autenticacao = mock(Authentication.class);
+        Chamado chamado = criarChamado("chamado-1", "usuario-1");
+        chamado.setSituacao(SituacaoChamado.RESOLVIDO);
+        when(repositorioChamado.findById("chamado-1")).thenReturn(Optional.of(chamado));
+        when(servicoAutenticacao.possuiPerfilTecnico(autenticacao)).thenReturn(true);
+
+        assertThatThrownBy(() -> servicoChamado.resolverChamado(
+                "chamado-1",
+                new RequisicaoResolucaoChamado("Nova solução."),
+                autenticacao))
+                .isInstanceOf(RegraDeNegocioException.class)
+                .hasMessageContaining("já está resolvido");
+
+        verify(repositorioChamado, never()).save(any(Chamado.class));
     }
 
     private Chamado criarChamado(String id, String idSolicitante) {
