@@ -1,10 +1,12 @@
 package com.pfc.thindesk.servico;
 
 import com.pfc.thindesk.dto.RequisicaoAberturaChamado;
+import com.pfc.thindesk.dto.RequisicaoResolucaoChamado;
 import com.pfc.thindesk.dto.RespostaChamado;
 import com.pfc.thindesk.entidade.Chamado;
 import com.pfc.thindesk.entidade.SituacaoChamado;
 import com.pfc.thindesk.excecao.RecursoNaoEncontradoException;
+import com.pfc.thindesk.excecao.RegraDeNegocioException;
 import com.pfc.thindesk.repositorio.RepositorioChamado;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,5 +70,29 @@ public class ServicoChamado {
         }
 
         return RespostaChamado.de(chamado);
+    }
+
+    public RespostaChamado resolverChamado(String id, RequisicaoResolucaoChamado requisicao,
+                                           Authentication autenticacao) {
+        Chamado chamado = repositorioChamado.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Chamado não encontrado com id: " + id));
+
+        boolean perfilTecnico = servicoAutenticacao.possuiPerfilTecnico(autenticacao);
+        boolean perfilAdministrador = servicoAutenticacao.possuiPerfilAdministrador(autenticacao);
+        if (!perfilTecnico && !perfilAdministrador) {
+            throw new AccessDeniedException("Apenas técnicos podem resolver chamados.");
+        }
+
+        if (chamado.getSituacao() == SituacaoChamado.RESOLVIDO) {
+            throw new RegraDeNegocioException("Chamado já está resolvido e não pode ser alterado.");
+        }
+
+        chamado.setSolucao(requisicao.solucao().trim());
+        chamado.setIdTecnicoResponsavel(servicoAutenticacao.obterIdUsuario(autenticacao));
+        chamado.setNomeTecnicoResponsavel(servicoAutenticacao.obterNomeUsuario(autenticacao));
+        chamado.setDataResolucao(LocalDateTime.now());
+        chamado.setSituacao(SituacaoChamado.RESOLVIDO);
+
+        return RespostaChamado.de(repositorioChamado.save(chamado));
     }
 }
