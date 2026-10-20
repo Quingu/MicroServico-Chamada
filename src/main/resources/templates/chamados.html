@@ -24,26 +24,21 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>Descricao</th>
-                        <th>Status</th>
-                        <th>Tipo</th>
-                        <th>Tecnico</th>
-                        <th>Usuário</th>
+                        <th>Título</th>
+                        <th>Descrição</th>
+                        <th>Situação</th>
+                        <th>Solicitante</th>
+                        <th>Abertura</th>
                     </tr>
                 </thead>
                 <tbody>
                 <th:block th:each="chamado : ${chamados}">
                     <tr>
+                        <td th:text="${chamado?.titulo}"></td>
                         <td th:text="${chamado?.descricao}"></td>
-                        <td th:text="${chamado?.status}"></td>
-                        <td th:text="${chamado?.tipo}"></td>
-                        <td th:text="${chamado?.tecnico}"></td>
-                        <td th:text="${chamado?.usuario}"></td>
-                        <td>
-                            <a th:href="@{'/chamados/novo/'}" class="btn btn-primary btn-sm">Novo</a>
-                            <a th:href="@{'/chamados/atualizar/' + ${chamado.id}}" class="btn btn-warning btn-sm">Editar</a>
-                            <a th:href="@{'/chamados/cancelar/' + ${chamado.id}}" class="btn btn-danger btn-sm">Cancelar</a>
-                        </td>
+                        <td th:text="${chamado?.situacao}"></td>
+                        <td th:text="${chamado?.nomeSolicitante}"></td>
+                        <td th:text="${chamado?.dataAbertura}"></td>
                     </tr>
                 </th:block>
                 </tbody>

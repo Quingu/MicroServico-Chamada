@@ -1,39 +1,31 @@
 package com.pfc.thindesk.controller;
 
-import com.pfc.thindesk.entity.Chamado;
-import com.pfc.thindesk.service.ChamadoService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
+import com.pfc.thindesk.dto.RequisicaoAberturaChamado;
+import com.pfc.thindesk.dto.RespostaChamado;
+import com.pfc.thindesk.servico.ServicoChamado;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/chamados")
 public class ChamadoController {
 
-    @Autowired
-    private ChamadoService chamadoService;
+    private final ServicoChamado servicoChamado;
+
+    public ChamadoController(ServicoChamado servicoChamado) {
+        this.servicoChamado = servicoChamado;
+    }
 
     @PostMapping
-    public Chamado criarChamado(@RequestBody Chamado chamado) {
-        return chamadoService.criarChamado(chamado);
-    }
-
-    @GetMapping
-    public List<Chamado> listarChamados() {
-        return chamadoService.listarChamados();
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Chamado> atualizarChamado(@PathVariable String id, @RequestBody Chamado chamadoAtualizado) {
-        Chamado chamado = chamadoService.atualizarChamado(id, chamadoAtualizado);
-        return ResponseEntity.ok(chamado);
-    }
-
-    @PostMapping("/atualizar/{id}")
-    public String atualizarChamado(@PathVariable String id, @ModelAttribute Chamado chamadoAtualizado, Model model) {
-        chamadoService.atualizarChamado(id, chamadoAtualizado);
-        return "redirect:/chamados"; // Redireciona para a página da lista de chamados
+    @ResponseStatus(HttpStatus.CREATED)
+    public RespostaChamado abrirChamado(@Valid @RequestBody RequisicaoAberturaChamado requisicao,
+                                        Authentication autenticacao) {
+        return servicoChamado.abrirChamado(requisicao, autenticacao);
     }
 }

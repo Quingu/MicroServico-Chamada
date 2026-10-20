@@ -2,6 +2,7 @@ package com.pfc;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -26,7 +27,8 @@ public class SecurityConfig {
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout") // Redirecionar para o login após logout
-            );
+            )
+            .httpBasic(Customizer.withDefaults()); // Permitir autenticação Basic para a API REST
         return http.build();
     }
 }

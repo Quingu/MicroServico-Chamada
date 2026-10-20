@@ -3,10 +3,10 @@ package com.pfc.thindesk.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.pfc.thindesk.entity.Cliente;
-import com.pfc.thindesk.entity.Chamado;
+import com.pfc.thindesk.entidade.Chamado;
 import com.pfc.thindesk.entity.HorarioAtendimento;
 import com.pfc.thindesk.service.ClienteService;
-import com.pfc.thindesk.service.ChamadoService;
+import com.pfc.thindesk.servico.ServicoChamado;
 import com.pfc.thindesk.service.HorarioAtendimentoService;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ public class HomeController {
     private static final Logger log = LoggerFactory.getLogger(HomeController.class);
 
     @Autowired
-    private ChamadoService chamadoService;
+    private ServicoChamado servicoChamado;
     @Autowired
     private ClienteService clienteService;
     @Autowired
@@ -43,7 +43,7 @@ public class HomeController {
 
     @GetMapping("/chamados")
     public String chamados(Model model) {
-        List<Chamado> chamados = chamadoService.listarChamados();
+        List<Chamado> chamados = servicoChamado.listarChamados();
         model.addAttribute("chamados", chamados); // Passa a lista para o modelo
         String fragment = "chamados :: content";
         log.info("Carregando fragmento: {}", fragment); // Log para depuração
