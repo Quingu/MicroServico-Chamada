@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.pfc.thindesk.dto.RequisicaoAberturaChamado;
 import com.pfc.thindesk.dto.RequisicaoResolucaoChamado;
 import com.pfc.thindesk.dto.RespostaChamado;
-import com.pfc.thindesk.entidade.SituacaoChamado;
+import com.pfc.thindesk.entity.SituacaoChamado;
 import com.pfc.thindesk.excecao.RecursoNaoEncontradoException;
 import com.pfc.thindesk.excecao.RegraDeNegocioException;
 import com.pfc.thindesk.servico.ServicoChamado;

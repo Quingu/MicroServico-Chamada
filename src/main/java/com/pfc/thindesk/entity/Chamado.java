@@ -1,4 +1,4 @@
-package com.pfc.thindesk.entidade;
+package com.pfc.thindesk.entity;
 
 import java.time.LocalDateTime;
 import org.springframework.data.annotation.Id;

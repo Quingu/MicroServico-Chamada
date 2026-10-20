@@ -1,7 +1,8 @@
 package com.pfc.thindesk.dto;
 
-import com.pfc.thindesk.entidade.Chamado;
-import com.pfc.thindesk.entidade.SituacaoChamado;
+import com.pfc.thindesk.entity.Chamado;
+import com.pfc.thindesk.entity.SituacaoChamado;
+
 import java.time.LocalDateTime;
 
 public record RespostaChamado(

@@ -1,4 +1,4 @@
-package com.pfc.thindesk.entidade;
+package com.pfc.thindesk.entity;
 
 public enum SituacaoChamado {
     ABERTO,

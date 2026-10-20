@@ -2,8 +2,9 @@ package com.pfc.thindesk.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.pfc.thindesk.entity.Chamado;
 import com.pfc.thindesk.entity.Cliente;
-import com.pfc.thindesk.entidade.Chamado;
 import com.pfc.thindesk.entity.HorarioAtendimento;
 import com.pfc.thindesk.service.ClienteService;
 import com.pfc.thindesk.servico.ServicoChamado;
