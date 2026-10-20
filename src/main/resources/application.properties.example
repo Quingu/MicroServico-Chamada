@@ -1,0 +1,14 @@
+# Copie este arquivo para application.properties e ajuste os valores locais.
+spring.data.mongodb.uri=${MONGODB_URI:mongodb://localhost:27017/thindesk}
+spring.data.mongodb.database=thindesk
+spring.data.mongodb.auto-index-creation=true
+
+spring.security.user.name=admin
+spring.security.user.password=thindesk
+
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+spring.thymeleaf.mode=HTML
+spring.thymeleaf.cache=false
+
+logging.level.com.atrah=DEBUG
